@@ -1,0 +1,154 @@
+﻿//Câu 1: Thống kê số vụ tai nạn xảy ra từng tháng trong năm 2017? (Drill down)
+select [Measures].[NumberAccident] on columns,
+{[Dim Date].[StartY-M].[2017].children} on rows
+from [Accident DW];
+
+
+
+//Câu 2: Ba tháng nào trong năm 2021 xảy ra tai nạn nhiều nhất tại bang Hamilton và tổng số vụ tai nạn trong từng tháng đó?
+select [Measures].[NumberAccident] on columns,
+		topcount([Dim Date].[StartY-M].[2021].children, 3, [Measures].[NumberAccident]) on rows
+from [Accident DW]
+where [Dim Location].[County].&[Hamilton];
+
+
+
+
+
+
+//Câu 3: Thống kê tổng số vụ tai nạn xảy ra từ năm 2019 đến 2021 tại mỗi bang với cùng thời tiết và đèn tín hiệu ?
+select [Measures].[NumberAccident] on columns,
+	non empty crossjoin([Dim Weather].[Weather Condition].children*[Dim Infrastructure].[Traffic Signal].children,
+	[Dim Location].[County].children) on rows
+from [Accident DW]
+where [Dim Date].[Start Year].&[2019]:[Dim Date].[Start Year].&[2021];
+
+
+
+
+//Câu 4:Với từng mức độ nghiêm trọng , hãy thống kê số vụ tai nạn 
+//từng năm?
+select {[Dim Date].[Start Year].children} on columns,
+		{[Dim Severity].[Severity].children} on rows
+from [Accident DW]
+where [Measures].[NumberAccident];
+
+
+
+
+//Câu 5: Số vụ tai nạn xảy ra trong từng bang
+//với mức độ nghiêm trọng là 4 ?
+select {[Dim Location].[County].children} on rows,
+		[Measures].[NumberAccident] on columns
+from [Accident DW]
+where [Dim Severity].[Severity].&[4];
+
+
+
+
+//Câu 6: Thống kê tổng số vụ tai nạn xảy ra tại mỗi bang với cùng thời gian thiên văn và điều kiện bùng binh ?
+select [Measures].[NumberAccident] on columns,
+	non empty crossjoin([Dim Time].[Sunrise Sunset].children*[Dim Infrastructure].[Roundabout].children,
+	[Dim Location].[County].children) on rows
+from [Accident DW];
+
+
+
+//Câu 7:Tại thành phố Berkeley xảy ra các loại tai nạn với các 
+//điều kiện thời tiết nào sắp xếp số vụ tai nạn theo thứ tự giảm dần?
+select [Measures].[NumberAccident] on columns,
+		non empty order([Dim Weather].[Weather Condition].children, [Measures].[NumberAccident], desc) on rows
+from [Accident DW]
+where [Dim Location].[City].&[Berkeley];
+
+
+
+
+//Câu 8: Với từng điều kiện thời tiết, hãy thống kê số vụ tai nạn
+//trong năm 2020 mà gần đó không có đèn tín hiệu theo thứ tự tăng dần ?
+select [Measures].[NumberAccident] on columns,
+		non empty order([Dim Weather].[Weather Condition].children, [Measures].[NumberAccident], asc) on rows
+from [Accident DW]
+where ([Dim Date].[Start Year].&[2020],
+		[Dim Infrastructure].[Traffic Signal].&[False]);
+
+
+
+
+//Câu 9: Các Bang có số vụ tại nạn > 10000 sắp xếp theo thứ tự giảm dần
+select [Measures].[NumberAccident] on columns,
+		order(
+			generate([Dim Location].[County].members, 
+					filter([Dim Location].[County].members, [Measures].[NumberAccident] > 10000)),
+			[Measures].[NumberAccident], desc) on rows
+from [Accident DW];
+
+
+
+
+
+//Câu 10: Khoảng cách lớn nhất các vụ tai nạn xảy ra tại Los Angeles từng quý năm 2021
+//điều kiện thời tiết là Fog
+select [Dim Date].[StartY-Q-M-D].[2021].children on columns,
+		[Measures].[MaxDistance] on rows
+from [Accident DW]
+where ([Dim Weather].[Weather Condition].&[Fog], 
+		[Dim Location].[County].[Los Angeles]);
+
+
+
+
+
+//Câu 11: Khoảng cách lớn nhất Các vụ tai nạn trong từng năm có điều kiện thời tiết là Rain
+select [Measures].[MaxDistance] on columns,
+	[Dim Date].[Start Year].children on rows
+from [Accident DW]
+where ([Dim Weather].[Weather Condition].&[Rain]);
+
+
+
+
+//Câu 12: Top 3 khung giờ xảy ra tai nạn nhiều nhất trong năm 2019 tại
+//thành phố Los Angeles? 
+select topcount([Dim Time].[Start Hour].children, 3, [Measures].[NumberAccident]) on columns,
+		[Measures].[NumberAccident] on rows
+from [Accident DW]
+where ([Dim Date].[Start Year].&[2019], 
+		[Dim Location].[City].&[Los Angeles]);
+
+
+
+
+
+//Câu 13: Điều kiện thời tiết nào tại bang Amelia có số vụ tai nạn lớn hơn 10
+select [Dim Weather].[Weather Condition].children
+	having [Measures].[NumberAccident] > 10 on rows,
+	[Measures].[NumberAccident] on columns
+from [Accident DW]
+where [Dim Location].[County].&[Amelia];
+
+
+
+
+
+//Câu 14: Thống kê số vụ vai nạn xảy ra từng tháng năm 2021 tại Los Angeles khung giờ từ 17-23
+select [Dim Date].[StartY-M].[2021].children on rows,
+		[Dim Time].[Start Hour Group].[17 - 23] on columns
+from [Accident DW]
+where ([Measures].[NumberAccident], [Dim Location].[City].&[Los Angeles]);
+
+
+
+//Câu 15: Theo từng năm, hãy thống kê số vụ tai nạn có điều kiện 
+//thời tiết là Light Rain có thời gian bắt đầu :
+//(1) Từ 0 giờ đến 5 giờ 
+//(2) Từ 6 giờ đến 12 giờ
+//(3) Từ 13 giờ đến 16 giờ 
+//(4) Từ 17 giờ trở đi
+select [Dim Date].[Start Year].children on columns,
+		[Dim Time].[Start Hour Group].children on rows
+from [Accident DW]
+where ([Measures].[NumberAccident], [Dim Weather].[Weather Condition].&[Light Rain]);
+
+
+
